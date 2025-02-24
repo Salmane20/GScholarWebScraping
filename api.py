@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict
 from scholarly import scholarly
 import time
+import os
 
 app = FastAPI(
     title="Scholar Scraper API",
@@ -11,13 +12,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add CORS middleware
+# Add CORS middleware with more specific configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=[
+        "http://localhost:3000",     # React default port
+        "http://localhost:8000",     # Local development
+        "https://*.render.com",      # Render.com domains
+        "https://*.vercel.app"       # Vercel domains
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 class ScholarProfile(BaseModel):
@@ -82,7 +88,11 @@ scraper = ScholarScraper()
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Scholar Scraper API"}
+    return {
+        "message": "Welcome to Scholar Scraper API",
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
 
 @app.get("/search/{professor_name}", response_model=ScholarProfile)
 async def search_professor(professor_name: str, max_publications: Optional[int] = None):
@@ -121,4 +131,9 @@ async def search_professor(professor_name: str, max_publications: Optional[int] 
     except StopIteration:
         raise HTTPException(status_code=404, detail=f"No results found for professor: {professor_name}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Health check endpoint for monitoring
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"} 
